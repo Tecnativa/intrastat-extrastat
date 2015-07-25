@@ -3,7 +3,7 @@
 #
 #    Intrastat Product module for Odoo
 #    Copyright (C) 2011-2015 Akretion (http://www.akretion.com)
-#    Copyright (C) 2015 Noviat (http://www.noviat.com)
+#    Copyright (C) 2009-2015 Noviat (http://www.noviat.com)
 #    @author Alexis de Lattre <alexis.delattre@akretion.com>
 #    @author Luc de Meyer <info@noviat.com>
 #
@@ -24,7 +24,7 @@
 
 {
     'name': 'Intrastat Product',
-    'version': '1.3',
+    'version': '1.4',
     'category': 'Intrastat',
     'license': 'AGPL-3',
     'summary': 'Base module for Intrastat Product',
@@ -36,16 +36,21 @@
         ],
     'conflicts': ['report_intrastat'],
     'data': [
-        'intrastat_view.xml',
-        'intrastat_declaration_view.xml',
-        'res_company_view.xml',
-        'account_invoice_view.xml',
-        'stock_view.xml',
+        'views/hs_code.xml',
+        'views/intrastat_region.xml',
+        'views/intrastat_unit.xml',
+        'views/intrastat_transaction.xml',
+        'views/intrastat_transport_mode.xml',
+        'views/intrastat_product_declaration.xml',
+        'views/res_company.xml',
+        'views/account_invoice.xml',
+        'views/stock_picking.xml',
+        'views/stock_warehouse.xml',
         'security/intrastat_security.xml',
         'security/ir.model.access.csv',
         'data/intrastat_transport_mode.xml',
         'data/intrastat_unit.xml',
     ],
-    'demo': ['intrastat_demo.xml'],
+    'demo': ['demo/intrastat_demo.xml'],
     'installable': True,
 }
