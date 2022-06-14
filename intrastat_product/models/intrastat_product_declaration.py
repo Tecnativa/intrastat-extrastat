@@ -1,6 +1,7 @@
 # Copyright 2011-2020 Akretion France (http://www.akretion.com)
 # Copyright 2009-2022 Noviat (http://www.noviat.com)
 # @author Alexis de Lattre <alexis.delattre@akretion.com>
+# Copyright 2022 Tecnativa - Víctor Martínez
 # @author Luc de Meyer <info@noviat.com>
 
 import logging
@@ -765,8 +766,6 @@ class IntrastatProductDeclaration(models.Model):
         self.declaration_line_ids.unlink()
         lines = self._gather_invoices(notedict)
         vals = {"note": notedict["note"]}
-
-        vals = {"note": notedict["note"]}
         if not lines:
             vals["action"] = "nihil"
             vals["note"] += (
@@ -780,7 +779,7 @@ class IntrastatProductDeclaration(models.Model):
 
         self.write(vals)
         if vals["note"]:
-            result_view = self.env.ref("intrastat_product.intrastat_result_view_form")
+            result_view = self.env.ref("intrastat_base.intrastat_result_view_form")
             return {
                 "name": _("Generate lines from invoices: results"),
                 "view_type": "form",
