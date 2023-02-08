@@ -32,11 +32,20 @@
             <field name="name" position="after">
                 <filter
                     name="intrastat"
-                    domain="[('intrastat', '=', True)]"
+                    domain="[('intrastat', 'in', ('b2b', 'b2c'))]"
                     string="Intrastat"
                 />
                 <separator />
             </field>
+            <filter name="active" position="after">
+                <group name="groupby">
+                    <filter
+                        name="intrastat_groupby"
+                        string="Intrastat"
+                        context="{'group_by': 'intrastat'}"
+                    />
+                </group>
+            </filter>
         </field>
     </record>
 </odoo>
