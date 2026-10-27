@@ -52,7 +52,6 @@ class IntrastatProductDeclaration(models.Model):
 
     company_id = fields.Many2one(
         comodel_name="res.company",
-        string="Company",
         required=True,
         default=lambda self: self.env.company,
     )
@@ -148,7 +147,7 @@ class IntrastatProductDeclaration(models.Model):
     )
     xml_attachment_id = fields.Many2one("ir.attachment", string="XML Attachment")
     xml_attachment_datas = fields.Binary(
-        related="xml_attachment_id.datas", string="XML Export"
+        related="xml_attachment_id.raw", string="XML Export"
     )
     xml_attachment_name = fields.Char(
         related="xml_attachment_id.name", string="XML Filename"
@@ -185,7 +184,7 @@ class IntrastatProductDeclaration(models.Model):
     def _compute_year_month(self):
         for this in self:
             if this.year and this.month:
-                this.year_month = "-".join([this.year, this.month])
+                this.year_month = f"{this.year}-{this.month}"
 
     @api.depends("company_id", "year", "month")
     def _compute_declaration_type(self):
@@ -356,23 +355,34 @@ class IntrastatProductDeclaration(models.Model):
     def _get_intrastat_transaction(self, inv_line, notedict):
         invoice = inv_line.move_id
         transaction = invoice.intrastat_transaction_id
-        fp2transaction = {
-            "b2b": self.env.ref("intrastat_product.intrastat_transaction_11"),
-            "b2c": self.env.ref("intrastat_product.intrastat_transaction_12"),
-        }
         if not transaction:
             # as we have searched with intrastat_fiscal_position in ('b2b', 'b2c')
             # we should always have intrastat_fiscal_position in fp2transaction
-            transaction = fp2transaction[invoice.intrastat_fiscal_position]
+            fp2transaction = {
+                "b2b": "intrastat_product.intrastat_transaction_11",
+                "b2c": "intrastat_product.intrastat_transaction_12",
+            }
+            transaction = self._intrastat_ref(
+                fp2transaction[invoice.intrastat_fiscal_position]
+            )
         return transaction
+
+    @api.model
+    def _intrastat_ref(self, xmlid):
+        """Record of a data xmlid without the existence query of env.ref(),
+        which the declaration would otherwise run for every invoice line
+        (the xmlid lookup itself is cached)"""
+        res_model, res_id = self.env["ir.model.data"]._xmlid_to_res_model_res_id(
+            xmlid, raise_if_not_found=True
+        )
+        return self.env[res_model].browse(res_id)
 
     def _get_weight_and_supplunits(self, inv_line, hs_code, notedict):
         line_qty = inv_line.quantity
         product = inv_line.product_id
         intrastat_unit_id = hs_code.intrastat_unit_id
         source_uom = inv_line.product_uom_id
-        kg_uom = self.env.ref("uom.product_uom_kgm")
-        self.env["decimal.precision"].precision_get("Stock Weight")
+        kg_uom = self._intrastat_ref("uom.product_uom_kgm")
         weight = suppl_unit_qty = 0.0
 
         if not source_uom:
@@ -465,23 +475,15 @@ class IntrastatProductDeclaration(models.Model):
         """
         region = self.env["intrastat.region"]
         move_type = inv_line.move_id.move_type
+        # Read through the invoice line relations (prefetched for all the lines
+        # of the declaration) instead of searching the order line of each line
         if move_type in ("in_invoice", "in_refund"):
-            po_line = self.env["purchase.order.line"].search(
-                Domain("invoice_lines", "in", inv_line.id), limit=1
-            )
-            if po_line:
-                if po_line.move_ids:
-                    region = po_line.move_ids[0].location_dest_id.get_intrastat_region()
+            location = inv_line.purchase_line_id.move_ids[:1].location_dest_id
+            region = location.intrastat_region_id
         elif move_type in ("out_invoice", "out_refund"):
-            so_line = self.env["sale.order.line"].search(
-                Domain("invoice_lines", "in", inv_line.id), limit=1
-            )
-            if so_line:
-                so = so_line.order_id
-                region = so.warehouse_id.region_id
-        if not region:
-            if self.company_id.intrastat_region_id:
-                region = self.company_id.intrastat_region_id
+            region = inv_line.sale_line_ids[:1].order_id.warehouse_id.region_id
+        if not region and self.company_id.intrastat_region_id:
+            region = self.company_id.intrastat_region_id
         return region
 
     def _get_transport(self, inv_line, notedict):
@@ -618,16 +620,22 @@ class IntrastatProductDeclaration(models.Model):
         return domain
 
     def _is_product(self, invoice_line):
-        if (
+        return bool(
             invoice_line.product_id
             and invoice_line.product_id.intrastat_type == "product"
-        ):
-            return True
-        else:
-            return False
+        )
 
     def _gather_invoices_init(self, notedict):
         """placeholder for localization modules"""
+
+    def _get_intrastat_line_by_invoice_line(self, invoices):
+        """Intrastat details of the invoices by invoice line, grouped once
+        instead of filtering them for every invoice line"""
+        empty_intrastat_line = self.env["account.move.intrastat.line"]
+        intrastat_line_by_inv_line = defaultdict(lambda: empty_intrastat_line)
+        for intrastat_line in invoices.intrastat_line_ids:
+            intrastat_line_by_inv_line[intrastat_line.invoice_line_id] |= intrastat_line
+        return intrastat_line_by_inv_line
 
     def _gather_invoices(self, notedict):
         lines = []
@@ -642,6 +650,8 @@ class IntrastatProductDeclaration(models.Model):
             .with_context(prefetch_fields=False)
             .search(domain, order=order)
         )
+        intrastat_line_by_inv_line = self._get_intrastat_line_by_invoice_line(invoices)
+        empty_intrastat_line = self.env["account.move.intrastat.line"]
         for invoice in invoices:
             lines_current_invoice = []
             total_inv_accessory_costs_cc = 0.0  # in company currency
@@ -659,8 +669,8 @@ class IntrastatProductDeclaration(models.Model):
                     invoice=invoice.name,
                     line_nbr=line_nbr,
                 )
-                inv_intrastat_line = invoice.intrastat_line_ids.filtered(
-                    lambda r, inv_line=inv_line: r.invoice_line_id == inv_line
+                inv_intrastat_line = intrastat_line_by_inv_line.get(
+                    inv_line, empty_intrastat_line
                 )
 
                 if (
@@ -1067,9 +1077,7 @@ class IntrastatProductComputationLine(models.Model):
     )
     declaration_type = fields.Selection(related="parent_id.declaration_type")
     reporting_level = fields.Selection(related="parent_id.reporting_level")
-    invoice_line_id = fields.Many2one(
-        "account.move.line", string="Invoice Line", readonly=True
-    )
+    invoice_line_id = fields.Many2one("account.move.line", readonly=True)
     invoice_id = fields.Many2one(
         "account.move", related="invoice_line_id.move_id", string="Invoice"
     )
@@ -1077,11 +1085,10 @@ class IntrastatProductComputationLine(models.Model):
     # number (via onchange) when you create a computation line manually
     partner_id = fields.Many2one(
         "res.partner",
-        string="Partner",
         domain=[("parent_id", "=", False)],
     )
     declaration_line_id = fields.Many2one(
-        "intrastat.product.declaration.line", string="Declaration Line", readonly=True
+        "intrastat.product.declaration.line", readonly=True
     )
     src_dest_country_id = fields.Many2one(
         "res.country",
@@ -1109,7 +1116,7 @@ class IntrastatProductComputationLine(models.Model):
     weight = fields.Float(digits="Stock Weight", help="Net weight in Kg")
     suppl_unit_qty = fields.Float(
         string="Suppl. Unit Qty",
-        digits="Product Unit of Measure",
+        digits="Product Unit",
         help="Supplementary Units Quantity",
     )
     amount_company_currency = fields.Monetary(
@@ -1162,7 +1169,7 @@ class IntrastatProductComputationLine(models.Model):
     )
 
     # extended declaration
-    incoterm_id = fields.Many2one("account.incoterms", string="Incoterm")
+    incoterm_id = fields.Many2one("account.incoterms")
     transport_id = fields.Many2one("intrastat.transport_mode", string="Transport Mode")
 
     @api.depends("region_id")
@@ -1191,10 +1198,16 @@ class IntrastatProductComputationLine(models.Model):
     @api.constrains("vat")
     def _check_vat(self):
         partner_obj = self.env["res.partner"]
+        # A declaration has many lines of the same partners: check each VAT once
+        checked = set()
         for this in self:
             if not this.vat:
                 continue
             country = this.partner_id.commercial_partner_id.country_id
+            key = (country, this.vat, this.partner_id.name)
+            if key in checked:
+                continue
+            checked.add(key)
             partner_obj._run_vat_checks(
                 country,
                 this.vat,
@@ -1339,5 +1352,5 @@ class IntrastatProductDeclarationLine(models.Model):
     )
     vat = fields.Char(string="VAT Number")
     # extended declaration
-    incoterm_id = fields.Many2one("account.incoterms", string="Incoterm")
+    incoterm_id = fields.Many2one("account.incoterms")
     transport_id = fields.Many2one("intrastat.transport_mode", string="Transport Mode")

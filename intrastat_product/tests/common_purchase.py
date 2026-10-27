@@ -64,18 +64,19 @@ class IntrastatPurchaseCommon(IntrastatProductCommon):
         cls.move_obj = cls.env["account.move"]
         cls._init_supplier()
 
-    @classmethod
-    def _create_purchase_order(cls, vals=None):
+    def _create_purchase_order(self, vals=None):
         vals = {
-            "partner_id": cls.supplier.id,
+            "partner_id": self.supplier.id,
         }
-        purchase_new = cls.purchase_obj.new(vals)
+        purchase_new = self.purchase_obj.new(vals)
         purchase_new.onchange_partner_id()
         purchase_vals = purchase_new._convert_to_write(purchase_new._cache)
-        cls.purchase = cls.purchase_obj.create(purchase_vals)
-        with Form(cls.purchase) as purchase_form:
-            with purchase_form.order_line.new() as line:
-                line.product_id = cls.product_c3po.product_variant_ids[0]
-                line.product_qty = 3.0
-                # Price should not be void - if no purchase pricelist
-                line.price_unit = 150.0
+        self.purchase = self.purchase_obj.create(purchase_vals)
+        with (
+            Form(self.purchase) as purchase_form,
+            purchase_form.order_line.new() as line,
+        ):
+            line.product_id = self.product_c3po.product_variant_ids[0]
+            line.product_qty = 3.0
+            # Price should not be void - if no purchase pricelist
+            line.price_unit = 150.0

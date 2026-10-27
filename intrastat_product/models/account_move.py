@@ -81,7 +81,7 @@ class AccountMove(models.Model):
     def _get_intrastat_line_vals(self, line):
         vals = {}
         decl_model = self.env["intrastat.product.declaration"]
-        notedict, key2label = decl_model._prepare_notedict()
+        notedict, _key2label = decl_model._prepare_notedict()
         if decl_model._is_product(line):
             hs_code = line.product_id.get_hs_code_recursively()
             if not hs_code:
@@ -148,12 +148,13 @@ class AccountMoveLine(models.Model):
     )
 
     def _compute_hs_code_id(self):
+        hs_code_by_line = {
+            intrastat_line.invoice_line_id: intrastat_line.hs_code_id
+            for intrastat_line in self.move_id.intrastat_line_ids
+        }
         for rec in self:
-            intrastat_line = self.move_id.intrastat_line_ids.filtered(
-                lambda r, rec=rec: r.invoice_line_id == rec
-            )
             rec.hs_code_id = (
-                intrastat_line.hs_code_id or rec.product_id.get_hs_code_recursively()
+                hs_code_by_line.get(rec) or rec.product_id.get_hs_code_recursively()
             )
 
 
@@ -170,7 +171,6 @@ class AccountMoveIntrastatLine(models.Model):
     )
     invoice_line_id = fields.Many2one(
         comodel_name="account.move.line",
-        string="Invoice Line",
         ondelete="cascade",
         required=True,
     )
@@ -198,13 +198,3 @@ class AccountMoveIntrastatLine(models.Model):
         string="Country of Origin of the Product",
         help="Country of origin of the product i.e. product 'made in ____'.",
     )
-
-    @api.onchange("invoice_line_id")
-    def _onchange_move_id(self):
-        moves = self.mapped("move_id")
-        dom = [
-            ("display_type", "=", "product"),
-            ("id", "in", moves.mapped("invoice_line_ids").ids),
-            ("id", "not in", moves.mapped("intrastat_line_ids.invoice_line_id").ids),
-        ]
-        return {"domain": {"invoice_line_id": dom}}

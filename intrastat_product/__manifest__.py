@@ -7,7 +7,7 @@
 
 {
     "name": "Intrastat Product",
-    "version": "19.0.1.0.0",
+    "version": "20.0.1.0.0",
     "category": "Intrastat",
     "license": "AGPL-3",
     "summary": "Base module for Intrastat Product",
@@ -24,7 +24,6 @@
     "excludes": ["account_intrastat"],
     "data": [
         "security/intrastat_security.xml",
-        "security/ir.model.access.csv",
         "report/report.xml",
         "views/hs_code.xml",
         "views/intrastat_region.xml",
@@ -42,6 +41,7 @@
         "data/intrastat_transport_mode.xml",
         "data/intrastat_unit.xml",
         "data/intrastat_transaction.xml",
+        "security/ir.access.csv",
     ],
     "demo": ["demo/intrastat_demo.xml"],
     "installable": True,

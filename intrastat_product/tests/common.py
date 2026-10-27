@@ -12,6 +12,17 @@ logger = logging.getLogger(__name__)
 
 
 class IntrastatProductCommon(IntrastatCommon):
+    # The accountant preparing the declarations from sales and purchases
+    # (account.group_account_manager does not imply the full accounting
+    # features in Community, which the declarations require)
+    _test_user_groups = (
+        *IntrastatCommon._test_user_groups,
+        "account.group_account_user",
+        "sales_team.group_sale_salesman_all_leads",
+        "purchase.group_purchase_user",
+        "stock.group_stock_user",
+    )
+
     @classmethod
     def _init_products(cls):
         # Create category - don't init intrastat values, do it in tests
@@ -197,21 +208,17 @@ class IntrastatProductCommon(IntrastatCommon):
         ]
         # Iterate on each row beginning on third one (two headers)
         for sheet, lines, line_fields in to_test:
-            i = 0
-            for row in sheet.iter_rows(min_row=4, max_row=sheet.max_row):
+            for i, row in enumerate(sheet.iter_rows(min_row=4, max_row=sheet.max_row)):
                 line = lines[i]
-                j = 0
-                dict_compare = dict()
-                for line_field in line_fields:
+                dict_compare = {}
+                for j, line_field in enumerate(line_fields):
                     column_spec = template.get(line_field)
                     dict_compare.update(
                         {row[j].value: column_spec.get("line").get("value")}
                     )
-                    j += 1
                 for key, value in dict_compare.items():
                     value_eval = self.xls_declaration._eval(value, {"line": line})
                     self.assertEqual(key, value_eval)
-                i += 1
 
     @classmethod
     def _create_region(cls, vals=None):
@@ -244,12 +251,14 @@ class IntrastatProductCommon(IntrastatCommon):
             values.update(vals)
         cls.transport_mode = cls.transport_mode_obj.create(values)
 
-    @classmethod
-    def _create_declaration(cls, vals=None):
+    def _create_declaration(self, vals=None):
+        # An instance method: BaseCommon rebinds the class attributes of the
+        # test case on each test, so a record kept on the class by a previous
+        # test would hide the new one
         values = {
-            "company_id": cls.env.company.id,
+            "company_id": self.env.company.id,
             "declaration_type": "dispatches",
         }
         if vals is not None:
             values.update(vals)
-        cls.declaration = cls.declaration_obj.create(values)
+        self.declaration = self.declaration_obj.create(values)

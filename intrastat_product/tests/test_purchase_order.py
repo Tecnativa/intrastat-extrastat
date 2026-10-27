@@ -50,6 +50,49 @@ class TestIntrastatProductPurchase(IntrastatPurchaseCommon):
         file_data = self._create_xls()
         self.check_xls(file_data[0])
 
+    def _invoice_received_purchase(self, date_order):
+        with freeze_time(date_order):
+            self._create_purchase_order()
+        self.purchase.button_confirm()
+        self.purchase.picking_ids.button_validate()
+        with freeze_time(date_order):
+            action = self.purchase.action_create_invoice()
+        invoice = self.move_obj.browse(action["res_id"])
+        invoice.invoice_date = fields.Date.from_string(date_order)
+        invoice.action_post()
+        return invoice
+
+    def test_purchase_declaration_region(self):
+        """The region of an arrival is the one of the warehouse whose stock
+        location received the goods, else the default region of the company"""
+        warehouse = self.purchase_obj.new({}).picking_type_id.warehouse_id
+        # Configured by the inventory and accounting administrators
+        warehouse.sudo().region_id = self.region
+        self._invoice_received_purchase("2021-09-01")
+        company_region = self.region_obj.sudo().create(
+            {
+                "code": "BRU",
+                "country_id": self.env.ref("base.be").id,
+                "company_id": self.company.id,
+                "name": "Brussels",
+            }
+        )
+        self.company.sudo().intrastat_region_id = company_region
+        with freeze_time("2021-10-01"):
+            self._create_declaration({"declaration_type": "arrivals"})
+        self.declaration.action_gather()
+        self.assertEqual(self.declaration.computation_line_ids.region_id, self.region)
+        self.assertEqual(
+            self.declaration.computation_line_ids.region_code, self.region.code
+        )
+        # Without region on the warehouse, the company one applies
+        warehouse.sudo().region_id = False
+        self.env.invalidate_all()
+        self.declaration.action_gather()
+        self.assertEqual(
+            self.declaration.computation_line_ids.region_id, company_region
+        )
+
 
 class TestIntrastatProductPurchaseCase(TestIntrastatProductPurchase, TransactionCase):
     """Test Intrastat Purchase"""

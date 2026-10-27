@@ -107,6 +107,25 @@ class TestIntrastatProductSale(IntrastatSaleCommon):
         self.declaration.action_gather()
         self.assertFalse(self.declaration.note)
 
+    def test_sale_declaration_region(self):
+        """The region of a dispatch is the one of the warehouse of the order"""
+        with freeze_time("2021-09-01"):
+            self._create_sale_order(self.customer)
+        # Configured by the inventory administrator
+        self.sale.warehouse_id.sudo().region_id = self.region
+        self.sale.action_confirm()
+        self.sale.picking_ids.button_validate()
+        with freeze_time("2021-09-01"):
+            invoice = self.sale._create_invoices()
+            invoice.action_post()
+        with freeze_time("2021-10-01"):
+            self._create_declaration({"declaration_type": "dispatches"})
+        self.declaration.action_gather()
+        self.assertEqual(self.declaration.computation_line_ids.region_id, self.region)
+        self.assertEqual(
+            self.declaration.computation_line_ids.region_code, self.region.code
+        )
+
 
 class TestIntrastatProductSaleCase(TestIntrastatProductSale, TransactionCase):
     """Test Intrastat Sale"""

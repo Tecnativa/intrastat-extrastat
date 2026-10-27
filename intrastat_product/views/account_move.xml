@@ -32,7 +32,7 @@
                             name="compute_intrastat_lines"
                             string="Compute"
                             help="(Re)compute the intrastat transaction details from the product master data."
-                            icon="fa-gears"
+                            icon="settings_applications"
                         />
                     </div>
                     <field name="intrastat_line_ids">

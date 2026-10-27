@@ -44,9 +44,11 @@ class TestIntrastatBrexit(IntrastatProductCommon, TransactionCase):
                 "fiscal_position_id": self.position.id,
             }
         )
-        with Form(inv_out_xi) as inv_form:
-            with inv_form.invoice_line_ids.new() as ail:
-                ail.product_id = self.product_c3po.product_variant_ids[0]
+        with (
+            Form(inv_out_xi) as inv_form,
+            inv_form.invoice_line_ids.new() as ail,
+        ):
+            ail.product_id = self.product_c3po.product_variant_ids[0]
         inv_out_xi.action_post()
 
         self._create_declaration(
@@ -71,9 +73,11 @@ class TestIntrastatBrexit(IntrastatProductCommon, TransactionCase):
                 "fiscal_position_id": self.position.id,
             }
         )
-        with Form(inv_in_xi) as inv_form:
-            with inv_form.invoice_line_ids.new() as ail:
-                ail.product_id = self.product_uk
+        with (
+            Form(inv_in_xi) as inv_form,
+            inv_form.invoice_line_ids.new() as ail,
+        ):
+            ail.product_id = self.product_uk
         inv_in_xi.invoice_date = inv_in_xi.date
         inv_in_xi.action_post()
 
@@ -101,9 +105,11 @@ class TestIntrastatBrexit(IntrastatProductCommon, TransactionCase):
                 "fiscal_position_id": self.position.id,
             }
         )
-        with Form(inv_in_xi) as inv_form:
-            with inv_form.invoice_line_ids.new() as ail:
-                ail.product_id = self.product_uk
+        with (
+            Form(inv_in_xi) as inv_form,
+            inv_form.invoice_line_ids.new() as ail,
+        ):
+            ail.product_id = self.product_uk
         inv_in_xi.invoice_date = inv_in_xi.date
         inv_in_xi.compute_intrastat_lines()
         ilines = inv_in_xi.intrastat_line_ids

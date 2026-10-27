@@ -128,7 +128,7 @@ class TestIntrastatProduct(IntrastatProductCommon):
         self.demo_company.country_id = False
         with self.assertRaises(ValidationError):
             self._create_declaration()
-            self.declaration.flush()
+            self.declaration.flush_recordset()
 
     def test_declaration_no_vat(self):
         self.demo_company.partner_id.vat = False

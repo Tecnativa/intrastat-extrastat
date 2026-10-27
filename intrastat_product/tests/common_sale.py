@@ -65,14 +65,13 @@ class IntrastatSaleCommon(IntrastatProductCommon):
         cls.sale_obj = cls.env["sale.order"]
         cls._init_customer()
 
-    @classmethod
-    def _create_sale_order(cls, partner, vals=None):
+    def _create_sale_order(self, partner, vals=None):
         if vals is None:
             vals = {}
         vals["partner_id"] = partner.id
-        sale_new = cls.sale_obj.new(vals)
+        sale_new = self.sale_obj.new(vals)
         sale_vals = sale_new._convert_to_write(sale_new._cache)
-        cls.sale = cls.sale_obj.create(sale_vals)
-        with Form(cls.sale) as sale_form, sale_form.order_line.new() as line:
-            line.product_id = cls.product_c3po.product_variant_ids[0]
+        self.sale = self.sale_obj.create(sale_vals)
+        with Form(self.sale) as sale_form, sale_form.order_line.new() as line:
+            line.product_id = self.product_c3po.product_variant_ids[0]
             line.product_uom_qty = 3.0
