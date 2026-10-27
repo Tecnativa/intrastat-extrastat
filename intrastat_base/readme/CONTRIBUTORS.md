@@ -3,3 +3,5 @@
 - Kumar Aberer, brain-tec AG \<<kumar.aberer@braintec-group.com>\>
 - Andrea Stirpe \<<a.stirpe@onestein.nl>\>
 - Denis Roussel \<<denis.roussel@acsone.eu>\>
+- [Tecnativa](https://www.tecnativa.com):
+  - Carlos Dauden

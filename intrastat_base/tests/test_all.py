@@ -102,7 +102,8 @@ class TestIntrastatBase(IntrastatCommon):
             side_effect=test_get_data,
             autospec=True,
         ):
-            self.chart_template_obj._load(
+            # Only administrators can install chart templates
+            self.chart_template_obj.sudo()._load(
                 template_code="test", company=self.demo_company, install_demo=False
             )
         with patch(

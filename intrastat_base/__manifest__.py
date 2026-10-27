@@ -5,14 +5,14 @@
 
 {
     "name": "Intrastat Reporting Base",
-    "version": "19.0.1.0.1",
+    "version": "20.0.1.0.0",
     "category": "Intrastat",
     "license": "AGPL-3",
     "summary": "Base module for Intrastat reporting",
     "author": "ACSONE SA/NV,Akretion,Noviat,Odoo Community Association (OCA)",
     "maintainers": ["alexis-via", "luc-demeyer"],
     "website": "https://github.com/OCA/intrastat-extrastat",
-    "depends": ["base_vat", "account"],
+    "depends": ["account"],
     "excludes": ["account_intrastat"],
     "data": [
         "views/product_template.xml",
