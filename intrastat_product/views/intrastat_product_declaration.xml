@@ -1,4 +1,4 @@
-<?xml version="1.0" ?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <odoo>
     <record id="intrastat_product_declaration_view_form" model="ir.ui.view">
         <field name="name">intrastat.product.declaration.form</field>

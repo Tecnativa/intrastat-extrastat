@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <odoo>
     <template
         id="report_invoice_document_intrastat_product"
@@ -27,22 +27,22 @@
                         <tbody>
                             <tr t-foreach="intrastat_lines_info" t-as="line">
                                 <td>
-                                    <span t-esc="line['product_id'].default_code" />
+                                    <span t-out="line['product_id'].default_code" />
                                 </td>
                                 <td>
-                                    <span t-esc="line['product_id'].display_name" />
+                                    <span t-out="line['product_id'].display_name" />
                                 </td>
                                 <td>
-                                    <span t-esc="line['hs_code_id'].local_code" />
+                                    <span t-out="line['hs_code_id'].local_code" />
                                 </td>
                                 <td>
-                                    <span t-esc="line['product_id'].weight" />
+                                    <span t-out="line['product_id'].weight" />
                                 </td>
                                 <td>
-                                    <span t-esc="round(line['weight'], 2)" />
+                                    <span t-out="round(line['weight'], 2)" />
                                 </td>
                                 <td>
-                                    <span t-esc="line['origin_country_id'].name" />
+                                    <span t-out="line['origin_country_id'].name" />
                                 </td>
                             </tr>
                         </tbody>

@@ -73,7 +73,6 @@ class IntrastatSaleCommon(IntrastatProductCommon):
         sale_new = cls.sale_obj.new(vals)
         sale_vals = sale_new._convert_to_write(sale_new._cache)
         cls.sale = cls.sale_obj.create(sale_vals)
-        with Form(cls.sale) as sale_form:
-            with sale_form.order_line.new() as line:
-                line.product_id = cls.product_c3po.product_variant_ids[0]
-                line.product_uom_qty = 3.0
+        with Form(cls.sale) as sale_form, sale_form.order_line.new() as line:
+            line.product_id = cls.product_c3po.product_variant_ids[0]
+            line.product_uom_qty = 3.0
